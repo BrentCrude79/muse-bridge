@@ -43,15 +43,13 @@ real build.)
 
 Three steps (full guide in [`SETUP.md`](SETUP.md)):
 
-1. **Build the exe once** (on the workstation — PyInstaller can't
-   cross-build; full notes in [`BUILD-EXE.md`](BUILD-EXE.md)):
-   ```bat
-   pip install pyinstaller
-   cd C:\Users\<you>\apps\muse
-   pyinstaller MuseBridge.spec
-   ```
-   Then **double-click `dist\MuseBridge.exe`**. The flower parks by the
-   clock — the bridge is up, in tray mode, no console. First run pops one
+1. **Get the exe** — download `MuseBridge-win-arm64.exe` from the
+   [v1.0 release](../../releases/tag/v1.0) (prebuilt, Windows ARM64) and
+   double-click it. (On x64 Windows, build it once instead — PyInstaller
+   can't cross-build, not even across architectures; full notes in
+   [`BUILD-EXE.md`](BUILD-EXE.md): `pip install pyinstaller`,
+   `cd C:\Users\<you>\apps\muse`, `pyinstaller MuseBridge.spec`.)
+   The flower parks by the clock — the bridge is up, in tray mode, no console. First run pops one
    dialog with two secrets, stored in
    `C:\Users\<you>\.muse-bridge\config.json`:
    - **LAN bearer key** → paste into your local tools. Model name: `muse-bridge`.
@@ -96,15 +94,17 @@ copy-paste configs live in `mcp/configs/`.
 
 ## Run it
 
-The exe is the preferred way — one file, no console, tray-first:
+The exe is the preferred way — one file, no console, tray-first.
+Grab `MuseBridge-win-arm64.exe` from the [v1.0 release](../../releases/tag/v1.0)
+(prebuilt), or build it yourself once (notes: [`BUILD-EXE.md`](BUILD-EXE.md)):
 
 ```bat
 pip install pyinstaller
 cd C:\Users\<you>\apps\muse
-pyinstaller MuseBridge.spec     :: build once (notes: BUILD-EXE.md)
+pyinstaller MuseBridge.spec     :: build once
 ```
 
-Double-click `dist\MuseBridge.exe` and the flower parks by the clock:
+Double-click the exe and the flower parks by the clock:
 hover for the version and live queue counts, right-click for status or
 quit, double-click toggles the console dashboard. Task completions pop a
 notification. First run shows one dialog with the two secrets — save them.
@@ -269,7 +269,9 @@ its own unverified claim, and treated that way.
 
 - `MuseBridge.spec` + `muse-bridge.ico` + `BUILD-EXE.md` — build the
   one-file exe (`pyinstaller MuseBridge.spec` → `dist\MuseBridge.exe`).
-  **This is the preferred way to run it.**
+  **This is the preferred way to run it.** Prebuilt binary
+  (`MuseBridge-win-arm64.exe`, Windows ARM64) is attached to the
+  [v1.0 release](../../releases/tag/v1.0).
 - `muse_bridge.py` — the front door + queue + task-tray mode (workstation, stdlib only). `python muse_bridge.py --version` prints the build; the version also shows in the dashboard header and the tray tooltip, so you can tell a stale copy from a fresh one. `muse_bridge.py --mcp` runs the MCP server.
 - `muse_bridge_mcp.py` — MCP server: 5 tools for Claude Code / Codex / opencode / Cline / goose (stdio, stdlib only). Also served from inside the exe.
 - `mcp/INSTALL.md` — per-host MCP setup guide
