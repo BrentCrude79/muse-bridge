@@ -57,7 +57,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.4"               # bump on every behavior change. Shown in the
+VERSION = "2.5"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -606,6 +606,49 @@ def queue_counts():
     return queued, done
 
 
+def _wintypes_shim(ctypes, wintypes):
+    """ctypes.wintypes omits several handle types on some builds (seen so
+    far: LRESULT, HCURSOR). Resolve every name the tray needs through this
+    shim: the real wintypes attribute when present, otherwise the equivalent
+    primitive -- so a missing attribute can never kill the tray again.
+    POINT/MSG get local struct definitions as the last resort."""
+    P = ctypes.c_void_p  # every handle type is pointer-sized
+
+    class _POINT(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+    class _MSG(ctypes.Structure):
+        _fields_ = [("hWnd", P), ("message", ctypes.c_uint),
+                    ("wParam", ctypes.c_size_t), ("lParam", ctypes.c_ssize_t),
+                    ("time", ctypes.c_ulong), ("pt", _POINT)]
+
+    fallbacks = {
+        "HWND": P, "HINSTANCE": P, "HMODULE": P, "HICON": P,
+        "HCURSOR": P, "HBRUSH": P, "HBITMAP": P, "HDC": P,
+        "HMENU": P, "LPVOID": P, "LPCWSTR": ctypes.c_wchar_p,
+        "WCHAR": ctypes.c_wchar, "DWORD": ctypes.c_ulong,
+        "UINT": ctypes.c_uint, "INT": ctypes.c_int,
+        "BOOL": ctypes.c_int, "ATOM": ctypes.c_ushort,
+        "POINT": _POINT, "MSG": _MSG,
+    }
+
+    class _Shim:
+        def __getattr__(self, name):
+            if name.startswith("__"):
+                raise AttributeError(name)
+            try:
+                return getattr(wintypes, name)
+            except AttributeError:
+                pass
+            try:
+                return fallbacks[name]
+            except KeyError:
+                raise AttributeError(
+                    "wintypes has no %r and no tray fallback" % name)
+
+    return _Shim()
+
+
 class _TrayIcon:
     WM_TRAY = 0x0400 + 100
     NIM_ADD, NIM_MODIFY, NIM_DELETE = 0, 1, 2
@@ -617,7 +660,9 @@ class _TrayIcon:
         if sys.platform != "win32":
             raise RuntimeError("tray mode is Windows-only")
         self._ct = ctypes
-        self._wt = wintypes
+        # wintypes omits handle types on some builds -- resolve through the
+        # shim so a missing attribute can never kill the tray again.
+        self._wt = _wintypes_shim(ctypes, wintypes)
         # wintypes omits LRESULT on some builds (and WPARAM/LPARAM are not
         # guaranteed either); the Win32 message-proc types are just
         # pointer-sized ints, so define the trio locally and be done.
