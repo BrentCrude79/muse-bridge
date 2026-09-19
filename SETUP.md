@@ -1,5 +1,10 @@
 # Muse Bridge — setup guide
 
+> **Preferred route:** build the one-file exe (`BUILD-EXE.md`:
+> `pyinstaller MuseBridge.spec`) and double-click `dist\MuseBridge.exe` —
+> bridge in tray mode, MCP server inside via `--mcp`, no console. The
+> script route below does the same thing and is handy for tinkering.
+
 Your tools talk to your AI agent through **Muse Bridge**, an OpenAI-compatible
 front door running on your workstation. Your tools send tasks through a
 tunnel, the agent works them, and returns the answers. Three pieces:

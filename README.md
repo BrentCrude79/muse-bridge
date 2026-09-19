@@ -23,8 +23,8 @@ your tools ──OpenAI-shaped──▶ Muse Bridge (127.0.0.1:8472) ──queue
 ![Live console dashboard](docs/dashboard.png)
 
 *The live console: queue counters, live tasks with security color + latency
-axis, and the recent-action log. Tray mode (`--tray`) parks it by the clock
-with a tooltip showing the same counters.*
+axis, and the recent-action log. The exe parks it by the clock — hover the
+flower for the same counters in a tooltip.*
 
 - **Chat** → research, writing, analysis, code review, second opinions
 - **Images** → generated PNGs, base64 in an OpenAI-style response
@@ -33,23 +33,30 @@ with a tooltip showing the same counters.*
 - **Batches** → queue N tasks in one call, collect results in the morning
 
 **v1.0.** Chat + image round-trips verified end-to-end over a Tailscale
-Funnel tunnel. MCP toolset (5 tools) built and smoke-tested; awaiting first
-live use.
+Funnel tunnel. One-file exe (`MuseBridge.exe`: bridge in tray mode + the
+5-tool MCP server via `--mcp`). MCP toolset built and smoke-tested; awaiting
+first live use.
 
 ## Quickstart
 
 Three steps (full guide in [`SETUP.md`](SETUP.md)):
 
-1. **Run it** (workstation, Python 3, stdlib only):
-   ```powershell
-   python muse_bridge.py
-   # or: python muse_bridge.py --tray   (hides the console, parks an icon by the clock)
+1. **Build the exe once** (on the workstation — PyInstaller can't
+   cross-build; full notes in [`BUILD-EXE.md`](BUILD-EXE.md)):
+   ```bat
+   pip install pyinstaller
+   cd C:\Users\<you>\apps\muse
+   pyinstaller MuseBridge.spec
    ```
-   First run prints two secrets once, stored in
+   Then **double-click `dist\MuseBridge.exe`**. The flower parks by the
+   clock — the bridge is up, in tray mode, no console. First run pops one
+   dialog with two secrets, stored in
    `C:\Users\<you>\.muse-bridge\config.json`:
    - **LAN bearer key** → paste into your local tools. Model name: `muse-bridge`.
    - **Queue path** (`/q/<random>/`) → give to your agent with your tunnel URL.
      Never put it in a tool config; it's tunnel-only.
+   (Rather run scripts? `pythonw.exe muse_bridge.py --tray` does the same —
+   stdlib only, no packages.)
 2. **Tunnel the queue paths only** (`/q/<cap>/pending`, `/q/<cap>/result/<id>`,
    `/q/<cap>/status`) — Tailscale Funnel or Cloudflare Tunnel. Never expose
    the whole port.
@@ -68,11 +75,11 @@ LAN bearer key, model = `muse-bridge`.
 
 | Tool | How | Status |
 |------|-----|--------|
-| **Claude Code** | MCP server (`muse_bridge_mcp.py`): `claude mcp add muse-bridge -- python C:\apps\muse\muse_bridge_mcp.py`. Five worker tools: `muse_task`, `muse_image`, `muse_say`, `muse_video`, `muse_batch`. Dispatch work like a subagent. | 🛠️ built, ready |
-| **Codex** | MCP server via `~/.codex/config.toml` (`mcp/configs/codex-config.toml`) — same five tools, headless dispatch from scripts. | 🛠️ built, ready |
-| **opencode** | MCP server via `opencode.json` (`mcp/configs/opencode.json`). | 🛠️ built, ready |
-| **Cline** | MCP server via `cline_mcp_settings.json` (`mcp/configs/cline_mcp_settings.json`). | 🛠️ built, ready |
-| **goose** (Block) | MCP extension via `~/.config/goose/config.yaml` (`mcp/configs/goose-config.yaml`). | 🛠️ built, ready |
+| **Claude Code** | MCP via the exe: `claude mcp add muse-bridge -- C:\Users\brent\apps\muse\MuseBridge.exe --mcp`. Five worker tools: `muse_task`, `muse_image`, `muse_say`, `muse_video`, `muse_batch`. Dispatch work like a subagent. | 🛠️ built, ready |
+| **Codex** | MCP via the exe (`~/.codex/config.toml`, `mcp/configs/codex-config.toml`) — same five tools, headless dispatch from scripts. | 🛠️ built, ready |
+| **opencode** | MCP via the exe (`opencode.json`, `mcp/configs/opencode.json`). | 🛠️ built, ready |
+| **Cline** | MCP via the exe (`cline_mcp_settings.json`, `mcp/configs/cline_mcp_settings.json`). | 🛠️ built, ready |
+| **goose** (Block) | MCP extension via the exe (`~/.config/goose/config.yaml`, `mcp/configs/goose-config.yaml`). | 🛠️ built, ready |
 | **OpenWebUI** | Admin → Connections → add OpenAI API connection: base URL + key, model `muse-bridge`. Chat UI for the queue. | 🔶 expected |
 | **SillyTavern** | API Connections → OpenAI-compatible: custom endpoint + key. Personas that can hand tasks to a real agent. | 🔶 expected |
 | **Tavo** | Custom OpenAI-compatible provider (TTS/audio routes). | 🔶 expected |
@@ -85,34 +92,29 @@ OpenAI-compatible config, not yet tried — report back.
 Full per-host MCP setup (all five hosts) in [`mcp/INSTALL.md`](mcp/INSTALL.md);
 copy-paste configs live in `mcp/configs/`.
 
-## Task-tray mode
+## Run it
 
-`python muse_bridge.py --tray` hides the dashboard console and parks the
-flower icon by the clock: hover for the version and live queue counts,
-right-click to show/hide the dashboard or quit; double-click toggles the
-console. Task completions pop a notification. Still stdlib-only (raw
-`ctypes`, icon drawn in code — no asset file, no packages), and any tray
-failure falls back to the normal console with the reason written to the
-action log. Launch with `pythonw.exe` for no window at all; the tray
-becomes the whole UI. On the very first run the console stays visible so
-you can copy the two secrets it prints once.
-
-## MuseBridge.exe (one file, no console)
-
-Build it on Windows — PyInstaller can't cross-build (see `BUILD-EXE.md`):
+The exe is the preferred way — one file, no console, tray-first:
 
 ```bat
 pip install pyinstaller
-cd C:\Users\brent\apps\muse
-pyinstaller MuseBridge.spec
+cd C:\Users\<you>\apps\muse
+pyinstaller MuseBridge.spec     :: build once (notes: BUILD-EXE.md)
 ```
 
-`dist\MuseBridge.exe` holds the interpreter, the bridge, *and* the MCP
-server in one file, wearing the flower as its icon. Double-click → bridge
-starts straight into tray mode; `MuseBridge.exe --mcp` serves the five MCP
-tools over stdio for Claude Code / Codex / opencode / Cline / goose. The
-exe reads the same `~/.muse-bridge/config.json`, so your keys carry over.
-SmartScreen will ask once (unsigned) — expected.
+Double-click `dist\MuseBridge.exe` and the flower parks by the clock:
+hover for the version and live queue counts, right-click for status or
+quit, double-click toggles the console dashboard. Task completions pop a
+notification. First run shows one dialog with the two secrets — save them.
+`MuseBridge.exe --mcp` serves the five MCP tools over stdio for Claude
+Code / Codex / opencode / Cline / goose. The exe reads the same
+`~/.muse-bridge/config.json`, so keys carry over — and it's unsigned, so
+SmartScreen asks once. Expected.
+
+Prefer scripts? `pythonw.exe muse_bridge.py --tray` runs the same tray
+mode (still stdlib-only: raw `ctypes`, the icon drawn in code, no
+packages); `python muse_bridge_mcp.py` is the standalone MCP server. Any
+tray failure falls back to the console with the reason in the action log.
 
 ## What you can do with it
 
@@ -263,8 +265,11 @@ its own unverified claim, and treated that way.
 
 ## Files
 
-- `muse_bridge.py` — the front door + queue + task-tray mode (workstation, stdlib only). `python muse_bridge.py --version` prints the build; the version also shows in the dashboard header and the tray tooltip, so you can tell a stale copy from a fresh one.
-- `muse_bridge_mcp.py` — MCP server: 5 tools for Claude Code / Codex / opencode / Cline / goose (stdio, stdlib only)
+- `MuseBridge.spec` + `muse-bridge.ico` + `BUILD-EXE.md` — build the
+  one-file exe (`pyinstaller MuseBridge.spec` → `dist\MuseBridge.exe`).
+  **This is the preferred way to run it.**
+- `muse_bridge.py` — the front door + queue + task-tray mode (workstation, stdlib only). `python muse_bridge.py --version` prints the build; the version also shows in the dashboard header and the tray tooltip, so you can tell a stale copy from a fresh one. `muse_bridge.py --mcp` runs the MCP server.
+- `muse_bridge_mcp.py` — MCP server: 5 tools for Claude Code / Codex / opencode / Cline / goose (stdio, stdlib only). Also served from inside the exe.
 - `mcp/INSTALL.md` — per-host MCP setup guide
 - `mcp/configs/` — copy-paste configs: Codex (toml), opencode (json), Cline (json), goose (yaml)
 - `SETUP.md` — full setup guide: tunnel options, tray mode, batches, troubleshooting
