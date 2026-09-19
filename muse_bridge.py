@@ -57,9 +57,20 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+VERSION = "2.2"               # bump on every behavior change. Shown in the
+                              # dashboard header, the tray tooltip, and
+                              # `python muse_bridge.py --version`.
 PORT = 8472
 WAIT_TIMEOUT = 900            # seconds a client connection is held open
 MAX_BODY = 96 * 1024 * 1024   # max request body (media results are large)
+
+HAS_CONSOLE = sys.stdout is not None  # False under pythonw.exe
+
+
+def say(msg):
+    """print() that survives pythonw (where stdout is None)."""
+    if HAS_CONSOLE:
+        print(msg)
 
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".muse-bridge")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
@@ -69,8 +80,10 @@ ACTIONS_LOG = os.path.join(CONFIG_DIR, "actions.log")  # local only, append-only
 GREEN, YELLOW, RED, CYAN, DIM, RESET = (
     "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[36m", "\x1b[2m", "\x1b[0m")
 
-if os.name == "nt":
-    os.system("")  # no-op that enables ANSI escape processing on Windows
+if os.name == "nt" and HAS_CONSOLE:
+    # No-op that enables ANSI escape processing on Windows. Skipped under
+    # pythonw: with no console it would spawn a stray cmd window.
+    os.system("")
 
 # Risk is assessed LOCALLY by task kind, on two axes. The endpoint cannot
 # see inside a task, so "chat" (open-ended agent work) is never green.
@@ -191,7 +204,10 @@ def task_status_of(t):
 
 
 def draw():
-    """Redraw the whole console dashboard."""
+    """Redraw the whole console dashboard. No-op without a console
+    (pythonw tray mode) -- the tray tooltip carries the status there."""
+    if not HAS_CONSOLE:
+        return
     with DRAW_LOCK:
         with TASKS_LOCK:
             items = sorted(TASKS.items(), key=lambda kv: kv[1]["created"])
@@ -219,8 +235,8 @@ def draw():
             recent = list(RECENT)
         L = []
         L.append(CYAN + "=" * 70 + RESET)
-        L.append("  %sMUSE BRIDGE%s  ·  127.0.0.1:%d  ·  queued %d · claimed %d · done %d · failed %d"
-                 % (CYAN, RESET, PORT, counts["queued"], counts["claimed"],
+        L.append("  %sMUSE BRIDGE v%s%s  ·  127.0.0.1:%d  ·  queued %d · claimed %d · done %d · failed %d"
+                 % (CYAN, VERSION, RESET, PORT, counts["queued"], counts["claimed"],
                     counts["done"], counts["failed"]))
         L.append(CYAN + "-" * 70 + RESET)
         L.append("  LIVE TASKS")
@@ -559,7 +575,9 @@ class H(BaseHTTPRequestHandler):
 def _refresher():
     while True:
         time.sleep(30)
-        draw()  # keep ages/counts fresh between events
+        draw()  # keep ages/counts fresh between events (no-op w/o console)
+        if _tray_icon is not None:
+            _tray_icon.refresh_tip()  # tooltip carries version + live counts
 
 
 # ---------------- task-tray mode (Windows, stdlib ctypes only) ----------------
@@ -604,12 +622,63 @@ class _TrayIcon:
         self.shell32 = ctypes.windll.shell32
         self.kernel32 = ctypes.windll.kernel32
         self.gdi32 = ctypes.windll.gdi32
-        self.kernel32.GetConsoleWindow.restype = wintypes.HWND
-        self.console = self.kernel32.GetConsoleWindow()  # NULL under pythonw
+        # Correct prototypes for every handle-taking call. Without argtypes,
+        # 64-bit handles are truncated to 32 bits -- that silently broke
+        # CreateWindowExW (HWND_MESSAGE -3 arrived as 0xFFFFFFFF) and would
+        # corrupt every icon/bitmap handle the same way.
+        u32, k32, s32, g32 = self.user32, self.kernel32, self.shell32, self.gdi32
+        k32.GetConsoleWindow.restype = wintypes.HWND
+        k32.GetModuleHandleW.restype = wintypes.HMODULE
+        k32.GetLastError.restype = wintypes.DWORD
+        s32.Shell_NotifyIconW.argtypes = [wintypes.DWORD, ctypes.c_void_p]
+        s32.Shell_NotifyIconW.restype = wintypes.BOOL
+        u32.ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
+        u32.ShowWindow.restype = wintypes.BOOL
+        u32.IsWindowVisible.argtypes = [wintypes.HWND]
+        u32.IsWindowVisible.restype = wintypes.BOOL
+        u32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        u32.SetForegroundWindow.restype = wintypes.BOOL
+        u32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT,
+                                       wintypes.WPARAM, wintypes.LPARAM]
+        u32.DefWindowProcW.restype = wintypes.LRESULT
+        u32.GetMessageW.argtypes = [ctypes.c_void_p, wintypes.HWND,
+                                    wintypes.UINT, wintypes.UINT]
+        u32.GetMessageW.restype = wintypes.BOOL
+        u32.TranslateMessage.argtypes = [ctypes.c_void_p]
+        u32.DispatchMessageW.argtypes = [ctypes.c_void_p]
+        u32.GetDC.argtypes = [wintypes.HWND]
+        u32.GetDC.restype = wintypes.HDC
+        u32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+        u32.LoadIconW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR]
+        u32.LoadIconW.restype = wintypes.HICON
+        u32.CreateIconIndirect.argtypes = [ctypes.c_void_p]
+        u32.CreateIconIndirect.restype = wintypes.HICON
+        u32.CreatePopupMenu.restype = wintypes.HMENU
+        u32.AppendMenuW.argtypes = [wintypes.HMENU, wintypes.UINT,
+                                    ctypes.c_void_p, wintypes.LPCWSTR]
+        u32.AppendMenuW.restype = wintypes.BOOL
+        u32.GetCursorPos.argtypes = [ctypes.c_void_p]
+        u32.TrackPopupMenu.argtypes = [wintypes.HMENU, wintypes.UINT,
+                                       wintypes.INT, wintypes.INT, wintypes.INT,
+                                       wintypes.HWND, ctypes.c_void_p]
+        u32.TrackPopupMenu.restype = wintypes.UINT
+        u32.DestroyMenu.argtypes = [wintypes.HMENU]
+        g32.CreateCompatibleBitmap.argtypes = [wintypes.HDC, wintypes.INT,
+                                               wintypes.INT]
+        g32.CreateCompatibleBitmap.restype = wintypes.HBITMAP
+        g32.SetBitmapBits.argtypes = [wintypes.HBITMAP, wintypes.UINT,
+                                      wintypes.LPVOID]
+        g32.CreateBitmap.argtypes = [wintypes.INT, wintypes.INT, wintypes.UINT,
+                                     wintypes.UINT, wintypes.LPVOID]
+        g32.CreateBitmap.restype = wintypes.HBITMAP
+        self.console = k32.GetConsoleWindow()  # NULL under pythonw
+        self._tip = self._tip_text(0, 0)
         self._make_window()
         self.icon = self._make_icon()
-        self._shell_notify(self.NIM_ADD,
-                           self.NIF_MESSAGE | self.NIF_ICON | self.NIF_TIP)
+        if not self._shell_notify(self.NIM_ADD,
+                                  self.NIF_MESSAGE | self.NIF_ICON | self.NIF_TIP):
+            raise RuntimeError("Shell_NotifyIcon(NIM_ADD) failed, err=%d"
+                               % k32.GetLastError())
 
     # ----- hidden message window -----
     def _make_window(self):
@@ -639,18 +708,27 @@ class _TrayIcon:
             return self.user32.DefWindowProcW(hwnd, msg, wp, lp)
 
         self._wndproc = WNDPROC(wndproc)  # keep a ref: Windows calls back into it
+        self.user32.RegisterClassExW.argtypes = [ctypes.POINTER(WNDCLASSEXW)]
+        self.user32.RegisterClassExW.restype = wintypes.ATOM
+        self.user32.CreateWindowExW.argtypes = [
+            wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+            wintypes.INT, wintypes.INT, wintypes.INT, wintypes.INT,
+            wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+        self.user32.CreateWindowExW.restype = wintypes.HWND
         wcx = WNDCLASSEXW()
         wcx.cbSize = ctypes.sizeof(WNDCLASSEXW)
         wcx.lpfnWndProc = self._wndproc
         wcx.hInstance = self.kernel32.GetModuleHandleW(None)
         wcx.lpszClassName = "MuseBridgeTray"
         if not self.user32.RegisterClassExW(ctypes.byref(wcx)):
-            raise RuntimeError("RegisterClassEx failed")
+            raise RuntimeError("RegisterClassEx failed, err=%d"
+                               % self.kernel32.GetLastError())
         self.hwnd = self.user32.CreateWindowExW(
             0, "MuseBridgeTray", "Muse Bridge Tray", 0,
             0, 0, 0, 0, -3, None, wcx.hInstance, None)  # -3 = HWND_MESSAGE
         if not self.hwnd:
-            raise RuntimeError("CreateWindowEx failed")
+            raise RuntimeError("CreateWindowEx failed, err=%d"
+                               % self.kernel32.GetLastError())
 
     # ----- icon: teal circle, drawn by hand so there is no asset file -----
     def _make_icon(self):
@@ -685,7 +763,9 @@ class _TrayIcon:
         finally:
             self.user32.ReleaseDC(None, hdc)
         if not hicon:
-            hicon = self.user32.LoadIconW(None, 32512)  # IDI_APPLICATION
+            # IDI_APPLICATION as MAKEINTRESOURCE (int-as-pointer, not a string)
+            hicon = self.user32.LoadIconW(
+                None, ctypes.cast(32512, wintypes.LPCWSTR))
         return hicon
 
     # ----- Shell_NotifyIcon wrapper -----
@@ -714,7 +794,7 @@ class _TrayIcon:
         nid.uFlags = flags
         nid.uCallbackMessage = self.WM_TRAY
         nid.hIcon = self.icon
-        nid.szTip = "Muse Bridge -- task queue for your AI agent"
+        nid.szTip = self._tip
         nid.szInfo = info[:255]
         nid.szInfoTitle = info_title[:63]
         nid.dwInfoFlags = info_flags
@@ -723,6 +803,19 @@ class _TrayIcon:
     def notify(self, title, text):
         self._shell_notify(self.NIM_MODIFY, self.NIF_INFO,
                            info=text, info_title=title, info_flags=0x1)
+
+    @staticmethod
+    def _tip_text(queued, done):
+        return "Muse Bridge v%s -- %d queued, %d done" % (VERSION, queued, done)
+
+    def refresh_tip(self):
+        """Re-point the hover tooltip at live counts. Best-effort."""
+        try:
+            queued, done = queue_counts()
+            self._tip = self._tip_text(queued, done)
+            self._shell_notify(self.NIM_MODIFY, self.NIF_TIP)
+        except Exception:
+            pass
 
     # ----- console show/hide -----
     def _toggle_console(self):
@@ -784,7 +877,7 @@ def tray_init():
     try:
         icon = _TrayIcon()
     except Exception as exc:  # noqa: BLE001 -- tray is cosmetic, never fatal
-        print("tray unavailable (%s) -- continuing with console" % exc)
+        say("tray unavailable (%s) -- continuing with console" % exc)
         return False
     _tray_icon = icon
     if not FIRST_RUN and icon.console:
@@ -792,20 +885,36 @@ def tray_init():
         # secrets printed on screen can be copied.
         icon.user32.ShowWindow(icon.console, 0)
     threading.Thread(target=icon.run, daemon=True, name="tray").start()
-    print("tray icon up -- right-click for status, double-click toggles console")
+    say("tray icon up (v%s) -- right-click for status, double-click toggles console"
+        % VERSION)
     return True
 
 
 if __name__ == "__main__":
+    if "--version" in sys.argv:
+        say("muse_bridge.py v%s" % VERSION)
+        sys.exit(0)
     if FIRST_RUN:
-        print("=" * 70)
-        print("FIRST RUN -- save these, they are shown only once here.")
-        print("  LAN bearer key (local tools): %s" % CONFIG["lan_key"])
-        print("  Queue path (tunnel, your agent's worker): /q/%s/" % CONFIG["cap"])
-        print("  Stored in %s (mode 600)" % CONFIG_PATH)
-        print("=" * 70)
-        print("Starting dashboard in 5 seconds... (Ctrl+C the old window if needed)")
-        time.sleep(5)
+        if HAS_CONSOLE:
+            print("=" * 70)
+            print("FIRST RUN -- save these, they are shown only once here.")
+            print("  LAN bearer key (local tools): %s" % CONFIG["lan_key"])
+            print("  Queue path (tunnel, your agent's worker): /q/%s/" % CONFIG["cap"])
+            print("  Stored in %s (mode 600)" % CONFIG_PATH)
+            print("=" * 70)
+            print("Starting dashboard in 5 seconds... (Ctrl+C the old window if needed)")
+            time.sleep(5)
+        else:
+            # pythonw: nowhere to print -- pop the secrets once instead.
+            # They are also stored in CONFIG_PATH either way.
+            import ctypes as _mb_ct
+            _mb_ct.windll.user32.MessageBoxW(
+                None,
+                "LAN bearer key (local tools):\n%s\n\n"
+                "Queue path (tunnel, your agent's worker):\n/q/%s/\n\n"
+                "Stored in %s"
+                % (CONFIG["lan_key"], CONFIG["cap"], CONFIG_PATH),
+                "Muse Bridge v%s -- first run, save these" % VERSION, 0x40)
     threading.Thread(target=_refresher, daemon=True).start()
     if TRAY_MODE:
         tray_init()
@@ -815,4 +924,4 @@ if __name__ == "__main__":
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
-        print("\nbye.")
+        say("\nbye.")

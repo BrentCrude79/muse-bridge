@@ -245,7 +245,7 @@ its own unverified claim, and treated that way.
 
 ## Files
 
-- `muse_bridge.py` — the front door + queue + task-tray mode (workstation, stdlib only)
+- `muse_bridge.py` — the front door + queue + task-tray mode (workstation, stdlib only). `python muse_bridge.py --version` prints the build (v2.2); the version also shows in the dashboard header and the tray tooltip, so you can tell a stale copy from a fresh one.
 - `muse_bridge_mcp.py` — MCP server: 5 tools for Claude Code / Codex / opencode / Cline / goose (stdio, stdlib only)
 - `mcp/INSTALL.md` — per-host MCP setup guide
 - `mcp/configs/` — copy-paste configs: Codex (toml), opencode (json), Cline (json), goose (yaml)
