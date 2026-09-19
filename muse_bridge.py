@@ -58,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.6"               # bump on every behavior change. Shown in the
+VERSION = "2.7"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -852,7 +852,8 @@ class _TrayIcon:
             hbm_color = self.gdi32.CreateCompatibleBitmap(hdc, W, H)
             if hbm_color:
                 self.gdi32.SetBitmapBits(hbm_color, len(xor), bytes(xor))
-            hbm_mask = self.gdi32.CreateBitmap(W, H, 1, 1, and_mask)
+            # LPVOID takes bytes, not bytearray
+            hbm_mask = self.gdi32.CreateBitmap(W, H, 1, 1, bytes(and_mask))
             hicon = None
             if hbm_color and hbm_mask:
                 ii = ICONINFO(True, 0, 0, hbm_mask, hbm_color)
