@@ -224,6 +224,9 @@ Use both. Fast local for the loop, the agent for the errands.
 
 ## Roadmap ideas
 
+- Jev (TypeSafe.ai) judgement layer: offload worker decision-making — task
+  triage, difficulty scoring, routing — to a judgement model instead of the
+  worker's own heuristics
 - Webhook callbacks instead of hold-open connections
 - File download route (PDFs, zips) alongside base64 media
 - Longer video via server-side clip stitching
