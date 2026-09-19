@@ -35,7 +35,9 @@ flower for the same counters in a tooltip.*
 **v1.0.** Chat + image round-trips verified end-to-end over a Tailscale
 Funnel tunnel. One-file exe (`MuseBridge.exe`: bridge in tray mode + the
 5-tool MCP server via `--mcp`). MCP toolset built and smoke-tested; awaiting
-first live use.
+first live use. (Numbering note: the pre-release dev builds were numbered
+2.0–2.10 during the build-out — retroactively they're 0.x. v1.0 is the first
+real build.)
 
 ## Quickstart
 

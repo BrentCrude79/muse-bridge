@@ -288,7 +288,7 @@ def main():
             send({"jsonrpc": "2.0", "id": mid, "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "muse-bridge", "version": "2.0"}}})
+                "serverInfo": {"name": "muse-bridge", "version": "1.0"}}})
         elif method == "notifications/initialized":
             pass  # no response for notifications
         elif method == "tools/list":
