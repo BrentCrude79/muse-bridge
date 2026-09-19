@@ -97,6 +97,23 @@ action log. Launch with `pythonw.exe` for no window at all; the tray
 becomes the whole UI. On the very first run the console stays visible so
 you can copy the two secrets it prints once.
 
+## MuseBridge.exe (one file, no console)
+
+Build it on Windows — PyInstaller can't cross-build (see `BUILD-EXE.md`):
+
+```bat
+pip install pyinstaller
+cd C:\Users\brent\apps\muse
+pyinstaller MuseBridge.spec
+```
+
+`dist\MuseBridge.exe` holds the interpreter, the bridge, *and* the MCP
+server in one file, wearing the flower as its icon. Double-click → bridge
+starts straight into tray mode; `MuseBridge.exe --mcp` serves the five MCP
+tools over stdio for Claude Code / Codex / opencode / Cline / goose. The
+exe reads the same `~/.muse-bridge/config.json`, so your keys carry over.
+SmartScreen will ask once (unsigned) — expected.
+
 ## What you can do with it
 
 ### Via the OpenAI endpoint

@@ -4,6 +4,6 @@ extensions:
     enabled: true
     type: stdio
     name: muse-bridge
-    cmd: python
+    cmd: C:\Users\brent\apps\muse\MuseBridge.exe
     args:
-      - C:\apps\muse\muse_bridge_mcp.py
+      - --mcp

@@ -1,1 +1,1 @@
-{"mcp":{"muse-bridge":{"command":["python","C:\\apps\\muse\\muse_bridge_mcp.py"],"enabled":true,"type":"local"}}}
+{"mcp":{"muse-bridge":{"command":["C:\\Users\\brent\\apps\\muse\\MuseBridge.exe","--mcp"],"enabled":true,"type":"local"}}}

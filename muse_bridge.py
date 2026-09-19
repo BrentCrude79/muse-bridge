@@ -58,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.9"               # bump on every behavior change. Shown in the
+VERSION = "2.10"              # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -146,7 +146,9 @@ CAP = CONFIG["cap"]
 # Task-tray mode: `python muse_bridge.py --tray` hides the console and parks an
 # icon by the clock (Windows, stdlib ctypes only). Non-Windows: flag is ignored
 # with a warning.
-TRAY_MODE = "--tray" in sys.argv
+TRAY_MODE = "--tray" in sys.argv or getattr(sys, "frozen", False)
+# The frozen exe (MuseBridge.exe, built with PyInstaller --noconsole) always
+# runs tray mode: double-click and the flower parks by the clock, no console.
 
 # task_id -> {"kind","payload","batch_id","created","claimed","event","result",
 #             "risk","risk_label","summary","files_reported","last_event"}
@@ -1023,6 +1025,13 @@ def tray_init():
 
 
 if __name__ == "__main__":
+    if "--mcp" in sys.argv:
+        # MCP server mode: stdio JSON-RPC for Claude Code / Codex / etc.
+        # The frozen exe serves this too (MuseBridge.exe --mcp); the bridge
+        # itself must already be running on localhost.
+        import muse_bridge_mcp
+        muse_bridge_mcp.main()
+        sys.exit(0)
     if "--version" in sys.argv:
         say("muse_bridge.py v%s" % VERSION)
         sys.exit(0)

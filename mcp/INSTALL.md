@@ -1,19 +1,21 @@
 # Muse Bridge MCP — install for your coding host
 
 One server, five tools (`muse_task`, `muse_image`, `muse_say`, `muse_video`,
-`muse_batch`), stdio, stdlib only. The bridge (`muse_bridge.py`) must be
-running — the MCP server talks to it on `127.0.0.1:8472` and reads your LAN
-key from `~/.muse-bridge/config.json`.
+`muse_batch`), stdio, stdlib only. The bridge must be running — the MCP
+server talks to it on `127.0.0.1:8472` and reads your LAN key from
+`~/.muse-bridge/config.json`.
 
-**1. Copy the files** — everything here goes on the workstation, e.g.:
+**1. Build the exe** (one time — see `BUILD-EXE.md`):
 
-```powershell
-xcopy \\path\\to\\muse-bridge C:\apps\muse\ /E /I
+```bat
+pip install pyinstaller
+cd C:\Users\brent\apps\muse
+pyinstaller MuseBridge.spec
+copy dist\MuseBridge.exe C:\Users\brent\apps\muse\
 ```
 
-(The repo's root files — `muse_bridge.py`, `SETUP.md`, `README.md` — can live
-there too. Point each config below at wherever `muse_bridge_mcp.py`
-lands.)
+Then **double-click `MuseBridge.exe`** — the bridge starts in tray mode
+(flower by the clock). The MCP server is inside the same file.
 
 **2. Register with your host** — pick your section:
 
@@ -22,7 +24,7 @@ lands.)
 ## Claude Code
 
 ```powershell
-claude mcp add muse-bridge -- python C:\apps\muse\muse_bridge_mcp.py
+claude mcp add muse-bridge -- C:\Users\brent\apps\muse\MuseBridge.exe --mcp
 ```
 
 Restart Claude Code. Tools appear as
@@ -35,8 +37,8 @@ Restart Claude Code. Tools appear as
 
 ```toml
 [mcp_servers.muse-bridge]
-command = "python"
-args = ["C:\\apps\\muse\\muse_bridge_mcp.py"]
+command = "C:\\Users\\brent\\apps\\muse\\MuseBridge.exe"
+args = ["--mcp"]
 ```
 
 ## opencode
@@ -48,7 +50,7 @@ args = ["C:\\apps\\muse\\muse_bridge_mcp.py"]
   "mcp": {
     "muse-bridge": {
       "type": "local",
-      "command": ["python", "C:\\apps\\muse\\muse_bridge_mcp.py"],
+      "command": ["C:\\Users\\brent\\apps\\muse\\MuseBridge.exe", "--mcp"],
       "enabled": true
     }
   }
@@ -63,8 +65,8 @@ args = ["C:\\apps\\muse\\muse_bridge_mcp.py"]
 {
   "mcpServers": {
     "muse-bridge": {
-      "command": "python",
-      "args": ["C:\\apps\\muse\\muse_bridge_mcp.py"],
+      "command": "C:\\Users\\brent\\apps\\muse\\MuseBridge.exe",
+      "args": ["--mcp"],
       "disabled": false
     }
   }
@@ -81,9 +83,9 @@ extensions:
     enabled: true
     type: stdio
     name: muse-bridge
-    cmd: python
+    cmd: C:\Users\brent\apps\muse\MuseBridge.exe
     args:
-      - C:\apps\muse\mcp\muse_bridge_mcp.py
+      - --mcp
 ```
 
 ---
@@ -95,10 +97,12 @@ they speak OpenAI-style HTTP, which the bridge already is. Point them at
 `http://127.0.0.1:8472` with your LAN bearer key and model `muse-bridge`
 (see `README.md` → "Connect your tools").
 
-## If `python` isn't on PATH
+## No-exe alternative
 
-Replace `python` with the full path to your Python, e.g.
-`C:\\Python313\\python.exe` (or `py -3`).
+Rather not build? The scripts run as-is: bridge via
+`pythonw.exe muse_bridge.py --tray`, MCP via
+`python muse_bridge_mcp.py` (put that command + no args in the configs
+above instead of the exe).
 
 ## Smoke test
 
