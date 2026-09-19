@@ -55,6 +55,10 @@ Three steps (full guide in [`SETUP.md`](SETUP.md)):
    the whole port.
 3. **Tell your agent** "queue is up at `<tunnel-url>` with cap path `/q/<...>/`"
    and it enables its worker (polls every ~5 min) plus an optional morning digest.
+   Have it save the worker protocol — tunnel URL, cap path, the
+   `pending?claim=1` / `result/{id}` endpoints, and the safety rules — to its
+   long-term memory. Then any future session can run the worker without being
+   briefed again.
 
 ## Connect your tools
 
