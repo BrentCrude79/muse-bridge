@@ -58,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.8"               # bump on every behavior change. Shown in the
+VERSION = "2.9"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -66,11 +66,14 @@ WAIT_TIMEOUT = 900            # seconds a client connection is held open
 MAX_BODY = 96 * 1024 * 1024   # max request body (media results are large)
 
 HAS_CONSOLE = sys.stdout is not None  # False under pythonw.exe
+# Set True once --tray has hidden the console: drawing to a hidden console
+# is pointless, and on some hosts console output re-shows the window.
+_CONSOLE_HIDDEN = False
 
 
 def say(msg):
     """print() that survives pythonw (where stdout is None)."""
-    if HAS_CONSOLE:
+    if HAS_CONSOLE and not _CONSOLE_HIDDEN:
         print(msg)
 
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".muse-bridge")
@@ -207,7 +210,7 @@ def task_status_of(t):
 def draw():
     """Redraw the whole console dashboard. No-op without a console
     (pythonw tray mode) -- the tray tooltip carries the status there."""
-    if not HAS_CONSOLE:
+    if not HAS_CONSOLE or _CONSOLE_HIDDEN:
         return
     with DRAW_LOCK:
         with TASKS_LOCK:
@@ -917,13 +920,16 @@ class _TrayIcon:
 
     # ----- console show/hide -----
     def _toggle_console(self):
+        global _CONSOLE_HIDDEN
         if not self.console:
             return
         if self.user32.IsWindowVisible(self.console):
             self.user32.ShowWindow(self.console, 0)       # SW_HIDE
+            _CONSOLE_HIDDEN = True
         else:
             self.user32.ShowWindow(self.console, 5)      # SW_SHOW
             self.user32.SetForegroundWindow(self.console)
+            _CONSOLE_HIDDEN = False
 
     # ----- right-click menu (rebuilt fresh every open) -----
     def _popup(self):
@@ -982,13 +988,30 @@ def tray_init():
         # can be read afterwards: ~/.muse-bridge/actions.log
         log_action("tray", "", "tray", msg, "failed")
         return False
+    global _CONSOLE_HIDDEN
     _tray_icon = icon
     hide_info = "skipped"
     if not FIRST_RUN and icon.console:
         # Hide the dashboard console; first run stays visible so the two
         # secrets printed on screen can be copied.
-        rc = icon.user32.ShowWindow(icon.console, 0)
-        hide_info = "hwnd=%s showwindow_rc=%s" % (icon.console, rc)
+        u32 = icon.user32
+        ct = icon._ct
+        wt = icon._wt
+        u32.GetWindowTextW.argtypes = [wt.HWND, ct.c_wchar_p, wt.INT]
+        u32.GetWindowTextW.restype = wt.INT
+        _tbuf = ct.create_unicode_buffer(256)
+        _tn = u32.GetWindowTextW(icon.console, _tbuf, 256)
+        _vis0 = u32.IsWindowVisible(icon.console)
+        _rc = u32.ShowWindow(icon.console, 0)
+        _err = icon.kernel32.GetLastError()
+        _vis1 = u32.IsWindowVisible(icon.console)
+        hide_info = ("hwnd=%s title=%r vis0=%s rc=%s err=%s vis1=%s"
+                     % (icon.console, _tbuf.value, _vis0, _rc, _err, _vis1))
+        if not _vis1:
+            # Hide confirmed: silence the console from here on. Drawing to
+            # a hidden console is pointless, and on some hosts console
+            # output re-shows the window. The tray icon/tooltip is the UI.
+            _CONSOLE_HIDDEN = True
     log_action("tray", "", "tray",
                "hide-console: first_run=%s %s" % (FIRST_RUN, hide_info),
                "ok")
