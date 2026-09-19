@@ -58,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.7"               # bump on every behavior change. Shown in the
+VERSION = "2.8"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -983,10 +983,15 @@ def tray_init():
         log_action("tray", "", "tray", msg, "failed")
         return False
     _tray_icon = icon
+    hide_info = "skipped"
     if not FIRST_RUN and icon.console:
         # Hide the dashboard console; first run stays visible so the two
         # secrets printed on screen can be copied.
-        icon.user32.ShowWindow(icon.console, 0)
+        rc = icon.user32.ShowWindow(icon.console, 0)
+        hide_info = "hwnd=%s showwindow_rc=%s" % (icon.console, rc)
+    log_action("tray", "", "tray",
+               "hide-console: first_run=%s %s" % (FIRST_RUN, hide_info),
+               "ok")
     msg = ("tray icon up (v%s) -- right-click for status, "
            "double-click toggles console" % VERSION)
     say(msg)
