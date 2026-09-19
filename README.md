@@ -189,7 +189,36 @@ it. Files the worker reports touching are logged as the worker's own claim.
 
 Use both. Fast local for the loop, the agent for the errands.
 
-## Security
+## Security design
+
+This is the part we're proudest of: Muse Bridge is **one-way by
+construction**. Your machines reach out; the agent only ever returns data.
+There is no path — direct or creative — by which the agent (or anyone
+holding its credentials) can execute code on your workstation. That's not
+a limitation we worked around. It's the core security property of the
+whole design.
+
+**Three venues, three trust levels.** Chat sessions and the tunnel worker
+live on the agent's machine: zero filesystem access to your PC, and the
+bridge protocol exposes no file-write route — the queue surface is
+`pending`, `result/{id}`, `status`, and that's everything. The bridge
+server on your workstation stores results as inert data; nothing it
+receives is evaluated or executed, because there is no command task kind.
+The *only* thing on your machine that writes files is the MCP server
+(`muse_bridge_mcp.py`), which runs locally **as you** and saves the
+agent's media results to disk. The writer is your code, on your box,
+under your user's hands.
+
+**The narrowest possible blast radius.** The LAN bearer key never leaves
+your machines (it gates `/v1/*`). The queue cap path (`/q/<random>/`) is
+unguessable and tunnel-only — and even if it leaked, all it buys is a
+task inbox: reading your queued tasks and posting bogus results. No
+execution. No file writes. No reach into the dashboard or the local
+action log (written solely by the bridge process; the queue protocol has
+no route to either). The "files" a worker reports touching are logged as
+its own unverified claim, and treated that way.
+
+**The checklist:**
 
 - The **LAN bearer key** never leaves your machines. It gates `/v1/*`.
 - The **queue path** (`/q/<random>/`) is unguessable and tunnel-only. It is
