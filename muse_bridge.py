@@ -50,6 +50,7 @@ import collections
 import hashlib
 import hmac
 import json
+import math
 import os
 import secrets
 import sys
@@ -57,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.5"               # bump on every behavior change. Shown in the
+VERSION = "2.6"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -807,18 +808,37 @@ class _TrayIcon:
             raise RuntimeError("CreateWindowEx failed, err=%d"
                                % self.kernel32.GetLastError())
 
-    # ----- icon: teal circle, drawn by hand so there is no asset file -----
+    # ----- icon: blue flower (the assistant's avatar), drawn by hand -----
     def _make_icon(self):
         ctypes, wintypes = self._ct, self._wt
         W = H = 32
         xor = bytearray(W * H * 4)
+        and_mask = bytearray(W * H // 8)  # 1-bit: 1 = transparent
+        cx = cy = 15.5
+        R = 14.0
+        BLUE = (196, 130, 59)     # B, G, R
+        WHITE = (255, 255, 255)   # B, G, R
         for y in range(H):
             for x in range(W):
-                dx, dy = x - 16, y - 16
-                if dx * dx + dy * dy <= 13 * 13:
-                    i = (y * W + x) * 4
-                    xor[i:i + 4] = b"\x33\xc4\x8a\x00"  # BGRA teal
-        and_mask = bytes(W * H // 8)  # all zeros = fully opaque
+                dx, dy = x - cx, y - cy
+                if dx * dx + dy * dy > R * R:
+                    # outside the disc: transparent
+                    and_mask[y * 4 + x // 8] |= 1 << (7 - (x % 8))
+                    continue
+                b, g, r = BLUE
+                if math.hypot(dx, dy) <= 2.2:
+                    b, g, r = WHITE  # heart
+                else:
+                    for k in range(8):  # eight white petals
+                        th = math.pi / 4 * k
+                        c, s = math.cos(th), math.sin(th)
+                        u = dx * c + dy * s - 7.0   # radial, petal center at 7
+                        v = -dx * s + dy * c        # tangential
+                        if (u / 4.2) ** 2 + (v / 2.1) ** 2 <= 1:
+                            b, g, r = WHITE
+                            break
+                i = (y * W + x) * 4
+                xor[i:i + 4] = bytes((b, g, r, 0))
 
         class ICONINFO(ctypes.Structure):
             _fields_ = [("fIcon", wintypes.BOOL),

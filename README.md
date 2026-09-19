@@ -87,14 +87,15 @@ copy-paste configs live in `mcp/configs/`.
 
 ## Task-tray mode
 
-`python muse_bridge.py --tray` hides the dashboard console and parks a teal
-icon by the clock: right-click for live queue counts, show/hide the dashboard,
-or quit; double-click toggles the console. Task completions pop a
-notification. Still stdlib-only (raw `ctypes`, icon drawn in code — no asset
-file, no packages), and any tray failure falls back to the normal console.
-Launch with `pythonw.exe` for no window at all; the tray becomes the whole UI.
-On the very first run the console stays visible so you can copy the two
-secrets it prints once.
+`python muse_bridge.py --tray` hides the dashboard console and parks the
+flower icon by the clock: hover for the version and live queue counts,
+right-click to show/hide the dashboard or quit; double-click toggles the
+console. Task completions pop a notification. Still stdlib-only (raw
+`ctypes`, icon drawn in code — no asset file, no packages), and any tray
+failure falls back to the normal console with the reason written to the
+action log. Launch with `pythonw.exe` for no window at all; the tray
+becomes the whole UI. On the very first run the console stays visible so
+you can copy the two secrets it prints once.
 
 ## What you can do with it
 
