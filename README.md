@@ -20,6 +20,12 @@ your tools ──OpenAI-shaped──▶ Muse Bridge (127.0.0.1:8472) ──queue
    └────────────── answers (chat / png / mp3 / mp4) ───────────────────────────────┘
 ```
 
+![Live console dashboard](docs/dashboard.png)
+
+*The live console: queue counters, live tasks with security color + latency
+axis, and the recent-action log. Tray mode (`--tray`) parks it by the clock
+with a tooltip showing the same counters.*
+
 - **Chat** → research, writing, analysis, code review, second opinions
 - **Images** → generated PNGs, base64 in an OpenAI-style response
 - **Audio** → text-to-speech MP3s (voiceovers, read-aloud, narration)
