@@ -1,0 +1,9 @@
+# ~/.config/goose/config.yaml — add under top-level `extensions:`
+extensions:
+  muse-bridge:
+    enabled: true
+    type: stdio
+    name: muse-bridge
+    cmd: python
+    args:
+      - C:\apps\muse\muse_bridge_mcp.py

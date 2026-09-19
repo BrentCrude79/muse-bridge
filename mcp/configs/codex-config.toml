@@ -1,0 +1,4 @@
+# ~/.codex/config.toml — add this block
+[mcp_servers.muse-bridge]
+command = "python"
+args = ["C:\\apps\\muse\\muse_bridge_mcp.py"]
