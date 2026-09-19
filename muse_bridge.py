@@ -57,7 +57,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.2"               # bump on every behavior change. Shown in the
+VERSION = "2.3"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -673,12 +673,38 @@ class _TrayIcon:
         g32.CreateBitmap.restype = wintypes.HBITMAP
         self.console = k32.GetConsoleWindow()  # NULL under pythonw
         self._tip = self._tip_text(0, 0)
-        self._make_window()
-        self.icon = self._make_icon()
-        if not self._shell_notify(self.NIM_ADD,
-                                  self.NIF_MESSAGE | self.NIF_ICON | self.NIF_TIP):
-            raise RuntimeError("Shell_NotifyIcon(NIM_ADD) failed, err=%d"
-                               % k32.GetLastError())
+        # The message window is created on the tray thread itself: window
+        # messages are dispatched to the thread that created the window, so
+        # building it on the main thread would leave clicks unhandled.
+        self._ready = threading.Event()
+        self._error = None
+        self.hwnd = None
+        self.icon = None
+
+    def start(self):
+        """Build the window + tray icon on the pump thread. Raises loudly."""
+        threading.Thread(target=self._thread_main, daemon=True,
+                         name="tray").start()
+        if not self._ready.wait(timeout=15):
+            raise RuntimeError("tray thread did not come up within 15s")
+        if self._error:
+            raise RuntimeError(self._error)
+
+    def _thread_main(self):
+        try:
+            self._make_window()
+            self.icon = self._make_icon()
+            if not self._shell_notify(
+                    self.NIM_ADD,
+                    self.NIF_MESSAGE | self.NIF_ICON | self.NIF_TIP):
+                raise RuntimeError("Shell_NotifyIcon(NIM_ADD) failed, err=%d"
+                                   % self.kernel32.GetLastError())
+        except Exception as exc:  # noqa: BLE001 -- captured, re-raised by start()
+            self._error = "%s: %s" % (type(exc).__name__, exc)
+        finally:
+            self._ready.set()
+        if not self._error:
+            self.run()  # message loop, forever
 
     # ----- hidden message window -----
     def _make_window(self):
@@ -876,17 +902,23 @@ def tray_init():
     global _tray_icon
     try:
         icon = _TrayIcon()
+        icon.start()
     except Exception as exc:  # noqa: BLE001 -- tray is cosmetic, never fatal
-        say("tray unavailable (%s) -- continuing with console" % exc)
+        msg = "tray unavailable (%s) -- continuing with console" % exc
+        say(msg)
+        # the dashboard redraw wipes the console, so persist this where it
+        # can be read afterwards: ~/.muse-bridge/actions.log
+        log_action("tray", "", "tray", msg, "failed")
         return False
     _tray_icon = icon
     if not FIRST_RUN and icon.console:
         # Hide the dashboard console; first run stays visible so the two
         # secrets printed on screen can be copied.
         icon.user32.ShowWindow(icon.console, 0)
-    threading.Thread(target=icon.run, daemon=True, name="tray").start()
-    say("tray icon up (v%s) -- right-click for status, double-click toggles console"
-        % VERSION)
+    msg = ("tray icon up (v%s) -- right-click for status, "
+           "double-click toggles console" % VERSION)
+    say(msg)
+    log_action("tray", "", "tray", msg, "ok")
     return True
 
 
