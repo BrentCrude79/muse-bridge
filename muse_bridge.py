@@ -57,7 +57,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "2.3"               # bump on every behavior change. Shown in the
+VERSION = "2.4"               # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -618,6 +618,12 @@ class _TrayIcon:
             raise RuntimeError("tray mode is Windows-only")
         self._ct = ctypes
         self._wt = wintypes
+        # wintypes omits LRESULT on some builds (and WPARAM/LPARAM are not
+        # guaranteed either); the Win32 message-proc types are just
+        # pointer-sized ints, so define the trio locally and be done.
+        self._LRESULT = ctypes.c_ssize_t    # LONG_PTR, signed
+        self._WPARAM = ctypes.c_size_t      # UINT_PTR
+        self._LPARAM = ctypes.c_ssize_t    # LONG_PTR
         self.user32 = ctypes.windll.user32
         self.shell32 = ctypes.windll.shell32
         self.kernel32 = ctypes.windll.kernel32
@@ -639,8 +645,8 @@ class _TrayIcon:
         u32.SetForegroundWindow.argtypes = [wintypes.HWND]
         u32.SetForegroundWindow.restype = wintypes.BOOL
         u32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT,
-                                       wintypes.WPARAM, wintypes.LPARAM]
-        u32.DefWindowProcW.restype = wintypes.LRESULT
+                                       self._WPARAM, self._LPARAM]
+        u32.DefWindowProcW.restype = self._LRESULT
         u32.GetMessageW.argtypes = [ctypes.c_void_p, wintypes.HWND,
                                     wintypes.UINT, wintypes.UINT]
         u32.GetMessageW.restype = wintypes.BOOL
@@ -709,9 +715,9 @@ class _TrayIcon:
     # ----- hidden message window -----
     def _make_window(self):
         ctypes, wintypes = self._ct, self._wt
-        WNDPROC = ctypes.WINFUNCTYPE(wintypes.LRESULT, wintypes.HWND,
-                                     wintypes.UINT, wintypes.WPARAM,
-                                     wintypes.LPARAM)
+        WNDPROC = ctypes.WINFUNCTYPE(self._LRESULT, wintypes.HWND,
+                                     wintypes.UINT, self._WPARAM,
+                                     self._LPARAM)
 
         class WNDCLASSEXW(ctypes.Structure):
             _fields_ = [("cbSize", wintypes.UINT), ("style", wintypes.UINT),
