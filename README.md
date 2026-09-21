@@ -1,4 +1,179 @@
-# Muse Bridge
+## Why Muse Bridge?
+
+Meta's **Muse Spark 1.3** creates an unusual situation in the current AI market: a frontier-class model paired with extraordinarily large consumer token allowances, but without a general-purpose endpoint that lets users spend those included tokens through the AI software ecosystem they already use.
+
+Spark itself is not the limitation. Meta designed Spark 1.3 for reasoning, coding, tool use, long-context work, and agentic workflows. The problem is the interface between **the tokens Meta gives Muse users** and **the applications in which users might want to spend them**.
+
+That gap is what Muse Bridge is intended to address.
+
+### Muse Spark 1.3 is a frontier model
+
+Meta positions Muse Spark 1.3 as a multimodal reasoning model designed for coding and agentic workloads, with text, image, and video capabilities and a context window of approximately **one million tokens**. See [Meta's Spark 1.3 announcement](https://research.meta.ai/blog/introducing-muse-spark-1-3) and the [Artificial Analysis model specifications](https://artificialanalysis.ai/models/muse-spark-1-3).
+
+Independent evaluation by **Artificial Analysis** likewise places Spark 1.3 among contemporary high-end models, including systems from Anthropic and OpenAI. Its evaluations are particularly relevant here because they include coding and agentic benchmarks rather than measuring only conversational performance.
+
+![Artificial Analysis comparison: Muse Spark 1.3 (max) alongside contemporary Claude, GPT, and other models](assets/muse-spark-artificial-analysis.png)
+
+*Source: [Artificial Analysis — Muse Spark 1.3 model evaluation and Intelligence Index](https://artificialanalysis.ai/models/muse-spark-1-3). User-supplied comparison snapshot; rankings depend on model version and reasoning setting.*
+
+The important point for Muse Bridge is not that Spark wins every benchmark. It doesn't. It is that the model being made available at this scale is sufficiently capable to be useful for exactly the kinds of **coding, automation, tool-use, and agent workloads** normally associated with expensive frontier-model inference.
+
+### 100 million tokens per week — for free
+
+Mark Zuckerberg has publicly described Meta's goal as making personal superintelligence broadly available, and announced that Muse users would receive up to **100 million tokens per week for free**. See [Meta's Muse launch announcement](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/).
+
+That number becomes more striking when expressed on the same monthly basis normally used to price AI subscriptions.
+
+Using 52 weeks ÷ 12 months:
+
+| Muse plan | Tokens/week | Approx. tokens/month | Subscription |
+| --- | ---: | ---: | ---: |
+| **Muse Free** | 100M | **433M** | **$0** |
+| **Muse Power** | 500M | **2.17B** | **$16/mo** |
+| **Muse Maximum** | 3B | **13.0B** | **$80/mo** |
+
+The free allocation alone therefore represents approximately **5.2 billion tokens per year** of potential model usage.
+
+Power raises that to approximately **26 billion tokens per year**.
+
+Maximum raises it to approximately **156 billion tokens per year**.
+
+### Put that next to Claude Pro
+
+Anthropic does not advertise Claude Pro as providing a fixed number of tokens. Its limits depend on usage patterns, model, context, and Anthropic's rolling usage windows.
+
+For a concrete real-world comparison, however, the author of this project has observed approximately **200 million tokens per week of usable Claude Pro capacity** during heavy coding and agent usage.
+
+That is an observed figure, **not an official Anthropic token entitlement**.
+
+At 200M/week, a $20 Claude Pro subscription corresponds to approximately:
+
+**867 million tokens/month.**
+
+That gives us a useful practical baseline:
+
+| Service | Approx. tokens/month | Monthly price | Relative to observed Claude Pro |
+| --- | ---: | ---: | ---: |
+| **Muse Free** | **433M** | **$0** | **0.5×** |
+| **Claude Pro¹** | **867M** | **$20** | **1×** |
+| **Muse Power** | **2.17B** | **$16** | **2.5×** |
+| **Muse Maximum** | **13.0B** | **$80** | **15×** |
+
+¹ *The Claude figure is the project author's observed usable capacity, not an Anthropic-advertised quota.*
+
+On this real-world comparison, **Muse Power provides approximately 2.5 times the monthly tokens observed from Claude Pro while costing $4 less per month.**
+
+Muse Maximum provides approximately **15 times the monthly token quantity for four times the subscription cost.**
+
+Measured as tokens per subscription dollar:
+
+| Service | Tokens/month | Price | Approx. tokens per $1 |
+| --- | ---: | ---: | ---: |
+| **Claude Pro¹** | 867M | $20 | **43.3M/$** |
+| **Muse Power** | 2.17B | $16 | **135.4M/$** |
+| **Muse Maximum** | 13.0B | $80 | **162.5M/$** |
+
+That makes Power approximately **3.1× the observed Claude tokens per dollar**, while Maximum is approximately **3.75×**.
+
+And Muse Free supplies approximately **half of the author's observed Claude Pro monthly capacity for $0**.
+
+These figures compare **token quantity**, not absolute model capability. Tokens produced by different models are not intrinsically equivalent units of intelligence, latency, compute, or useful work.
+
+### Another way to look at the numbers: $0.10 per million tokens
+
+There is also a useful external reference point for what extremely inexpensive Spark inference looks like.
+
+The project author's OpenCode Zen / Muse Spark Contributor comparison uses **$0.10 per million input tokens** and **$0.20 per million output tokens** as its reference rates. The Contributor program achieves those unusually low prices in exchange for permission to use prompts and completions for model training. See [OpenCode Zen](https://dev.opencode.ai/docs/zen).
+
+Using the **$0.10/M input-token figure** as a deliberately simple common denominator, the raw token quantities represented by the Muse subscriptions become:
+
+| Muse plan | Approx. tokens/month | At $0.10 / 1M tokens | Subscription |
+| --- | ---: | ---: | ---: |
+| **Free** | 433M | **$43.30** | **$0** |
+| **Power** | 2.17B | **$217** | **$16** |
+| **Maximum** | 13.0B | **$1,300** | **$80** |
+
+This is intentionally an **input-token-equivalent calculation using the $0.10/M figure**, not an estimate of Meta's cost of serving Muse and not a claim that every Muse token would otherwise cost exactly ten cents per million.
+
+It provides a common denominator for understanding the sheer quantity of inference represented by the allocations.
+
+At even that extremely inexpensive reference price, the **$16 Power subscription contains a nominal token quantity equivalent to roughly $217/month of $0.10/M inference**, while the **$80 Maximum subscription represents roughly $1,300/month**.
+
+### So why not just connect Muse to your existing tools?
+
+Because the enormous consumer allocation and the general-purpose developer interface are two different products.
+
+Spark 1.3 itself is explicitly capable of coding and agentic work. Meta also provides **Muse Code**, giving Spark a first-party coding environment.
+
+But Muse Code does **not** give a free Muse user a general-purpose OpenAI-compatible API endpoint representing that user's included **100M tokens/week**.
+
+That distinction is critical.
+
+The modern AI ecosystem increasingly depends on standardized inference interfaces. An OpenAI-compatible endpoint can be consumed by or adapted into tools such as:
+
+- SillyTavern
+- Open WebUI
+- local-LLM front ends
+- agent frameworks
+- orchestration systems
+- API routers
+- automation platforms
+- development environments
+- countless applications already built around OpenAI-compatible APIs
+
+Claude Code uses Anthropic's protocol rather than the OpenAI Chat Completions protocol directly, but the same architectural issue applies: connecting an arbitrary model requires an appropriate endpoint or compatibility layer.
+
+**Muse's free consumer allowance provides neither an unrestricted OpenAI-compatible endpoint nor a generic API balance that can simply be dropped into those applications.**
+
+Muse Code addresses coding by supplying **Meta's coding harness**.
+
+It does not expose the user's consumer Muse allocation as a general-purpose inference service for arbitrary third-party software.
+
+### Spark is available by API — but that is a different pool of tokens
+
+This distinction is easy to miss because Muse Spark **is** available through APIs.
+
+For example, OpenCode Zen currently exposes regular Muse Spark 1.3 through an OpenAI Responses-compatible interface, and separately exposes Muse Spark 1.3 Contributor. OpenCode's published pricing currently lists regular Spark at **$1.25/M input and $4.25/M output**, while its Contributor offering can be dramatically cheaper or temporarily free under different conditions. See [OpenCode Zen's model interfaces and pricing](https://dev.opencode.ai/docs/zen).
+
+That proves the underlying model can operate perfectly well behind a standardized inference interface.
+
+What it does **not** do is turn:
+
+**your 100M/week free Muse allowance**
+
+into:
+
+**your 100M/week OpenAI-compatible API allowance.**
+
+Those are separate access paths.
+
+And that distinction becomes increasingly significant at the paid consumer tiers, where the allocation grows from hundreds of millions into **billions of tokens per week**.
+
+### The interface gap
+
+That leaves an unusual mismatch:
+
+> **Meta has made an enormous quantity of frontier-class inference available to individual users, but the largest subsidized allocation lives inside Meta's Muse ecosystem rather than behind the general-purpose inference interfaces used by much of the existing AI software ecosystem.**
+
+Spark does not need Muse Bridge to become agentic.
+
+Spark is already agentic.
+
+It does not need Muse Bridge to become a coding model.
+
+Meta already provides Muse Code.
+
+**The missing piece is interoperability.**
+
+Muse Bridge is designed to address that interface boundary: allowing existing AI applications, coding tools, agent frameworks, local-LLM software, and orchestration systems to work with Muse through familiar inference interfaces rather than requiring every application to understand a Meta-specific consumer harness.
+
+**Meta supplied the model.**
+
+**Meta supplied the tokens.**
+
+**Muse Bridge supplies the bridge.**
+
+
 
 Dispatch work to a full agent — not just a model — from any tool that speaks OpenAI.
 
