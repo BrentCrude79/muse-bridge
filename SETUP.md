@@ -64,6 +64,19 @@ journalctl --user -u muse-bridge -f
 It starts at boot when lingering is on (`loginctl enable-linger $USER`). To update, run
 `git pull` and then `systemctl --user restart muse-bridge`.
 
+To reach a server bridge, use two Tailscale routes: a public one for the queue, and a tailnet-only one for your tools:
+
+```bash
+CAP=...   # the "cap" value from ~/.muse-bridge/config.json
+tailscale funnel --bg --set-path "/q/$CAP" "http://127.0.0.1:8472/q/$CAP"   # internet: queue only
+tailscale serve  --bg --https=8472 http://127.0.0.1:8472                    # tailnet: /v1
+```
+
+On the workstation, point the MCP server at the server bridge with
+`~/.muse-bridge/mcp.json`: `{"base_url": "https://<host>.<tailnet>.ts.net:8472", "lan_key": "..."}`.
+You can use the `MUSE_BRIDGE_URL` and `MUSE_BRIDGE_KEY` environment variables instead.
+Keep that file private: it holds the LAN key.
+
 Quick test (new terminal):
 
 ```powershell

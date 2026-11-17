@@ -10,8 +10,10 @@ Five tools (stdio transport, stdlib only):
   muse_batch  {tasks, wait?, timeout_s?}                     -> queue N tasks at once,
                                                                optionally wait and collect
 
-Talks to muse_bridge.py on localhost (must be running). Reads the LAN key
-from ~/.muse-bridge/config.json.
+Talks to muse_bridge.py on localhost (must be running) using the LAN key in
+~/.muse-bridge/config.json. For a bridge on another machine, put
+{"base_url": "https://host:8472", "lan_key": "..."} in ~/.muse-bridge/mcp.json,
+or set MUSE_BRIDGE_URL / MUSE_BRIDGE_KEY.
 
 MCP hosts (configs in mcp/):
   Claude Code : claude mcp add muse-bridge -- python C:\\apps\\muse\\muse_bridge_mcp.py
@@ -28,19 +30,37 @@ import sys
 import time
 import urllib.request
 
-CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".muse-bridge", "config.json")
+CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".muse-bridge")
+CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")  # the bridge's own config
+CLIENT_PATH = os.path.join(CONFIG_DIR, "mcp.json")     # optional: remote bridge
 OUT_DIR = os.path.join(os.path.expanduser("~"), "dev-fleet", "out")
 TIMEOUT = 920          # just over the endpoint's 900s hold-open
 POLL_EVERY = 30        # seconds between batch status polls
 
 
 def cfg():
-    with open(CONFIG_PATH, encoding="utf-8") as f:
-        return json.load(f)
+    """Where the bridge is and how to authenticate. Later sources win:
+    config.json (bridge on this machine) -> mcp.json {"base_url", "lan_key"}
+    (bridge on another machine, e.g. over a tailnet) -> env MUSE_BRIDGE_URL /
+    MUSE_BRIDGE_KEY."""
+    c = {}
+    for path in (CONFIG_PATH, CLIENT_PATH):
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                c.update(json.load(f))
+    if os.environ.get("MUSE_BRIDGE_URL"):
+        c["base_url"] = os.environ["MUSE_BRIDGE_URL"]
+    if os.environ.get("MUSE_BRIDGE_KEY"):
+        c["lan_key"] = os.environ["MUSE_BRIDGE_KEY"]
+    if not c.get("lan_key"):
+        raise RuntimeError("no LAN key: run the bridge here, or put base_url + "
+                           "lan_key in %s" % CLIENT_PATH)
+    return c
 
 
 def base():
-    return "http://127.0.0.1:%d" % cfg().get("port", 8472)
+    c = cfg()
+    return (c.get("base_url") or "http://127.0.0.1:%d" % c.get("port", 8472)).rstrip("/")
 
 
 def _req(method, path, body=None):
