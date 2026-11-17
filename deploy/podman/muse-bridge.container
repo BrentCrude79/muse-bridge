@@ -1,0 +1,31 @@
+# Muse Bridge as a rootless Podman quadlet (user service).
+# Install: copy to ~/.config/containers/systemd/, then
+#   systemctl --user daemon-reload && systemctl --user start muse-bridge
+# Code:   ~/muse-bridge (this repo), mounted read-only -- update = git pull + restart.
+# State:  ~/.muse-bridge (config.json secrets + actions.log), same layout as on Windows.
+
+[Unit]
+Description=Muse Bridge (OpenAI-compatible front door + task queue)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=muse-bridge
+Image=docker.io/library/python:3.12-slim
+Exec=python -u /app/muse_bridge.py --headless
+Volume=%h/muse-bridge:/app:ro,Z
+Volume=%h/.muse-bridge:/root/.muse-bridge:Z
+# Host network: the bridge binds 127.0.0.1:8472 on the host itself, so it stays
+# loopback-only. Reach it from other machines through a tunnel, never a PublishPort.
+Network=host
+Environment=TZ=America/Los_Angeles PYTHONDONTWRITEBYTECODE=1
+# SIGINT -> KeyboardInterrupt -> clean shutdown
+StopSignal=SIGINT
+AutoUpdate=registry
+
+[Service]
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

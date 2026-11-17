@@ -47,6 +47,23 @@ all (tray becomes the whole UI), launch with `pythonw.exe` instead of
 `python.exe`. Note: on the very first run the console stays visible so you
 can copy the two secrets it prints once.
 
+**Linux server (rootless Podman quadlet).** `deploy/podman/muse-bridge.container`
+runs the bridge as a user service on the stock `python:3.12-slim` image, with
+this repo at `~/muse-bridge` mounted read-only and the secrets in
+`~/.muse-bridge`. Host networking keeps it on the server's own `127.0.0.1:8472`.
+It runs with `--headless`, so the journal gets one line per event instead of the
+dashboard:
+
+```bash
+git clone https://github.com/BrentCrude79/muse-bridge.git ~/muse-bridge
+cp ~/muse-bridge/deploy/podman/muse-bridge.container ~/.config/containers/systemd/
+systemctl --user daemon-reload && systemctl --user start muse-bridge
+journalctl --user -u muse-bridge -f
+```
+
+It starts at boot when lingering is on (`loginctl enable-linger $USER`). To update, run
+`git pull` and then `systemctl --user restart muse-bridge`.
+
 Quick test (new terminal):
 
 ```powershell

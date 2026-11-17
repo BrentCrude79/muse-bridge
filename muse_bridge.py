@@ -58,7 +58,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "1.0"               # bump on every behavior change. Shown in the
+VERSION = "1.1"             # bump on every behavior change. Shown in the
                               # dashboard header, the tray tooltip, and
                               # `python muse_bridge.py --version`.
 PORT = 8472
@@ -66,6 +66,9 @@ WAIT_TIMEOUT = 900            # seconds a client connection is held open
 MAX_BODY = 96 * 1024 * 1024   # max request body (media results are large)
 
 HAS_CONSOLE = sys.stdout is not None  # False under pythonw.exe
+# Headless (--headless or MUSE_BRIDGE_HEADLESS=1): for systemd / containers.
+# No dashboard redraws and no colors -- one plain log line per event instead.
+HEADLESS = "--headless" in sys.argv or os.environ.get("MUSE_BRIDGE_HEADLESS") == "1"
 # Set True once --tray has hidden the console: drawing to a hidden console
 # is pointless, and on some hosts console output re-shows the window.
 _CONSOLE_HIDDEN = False
@@ -83,6 +86,8 @@ ACTIONS_LOG = os.path.join(CONFIG_DIR, "actions.log")  # local only, append-only
 # ---------- console colors (ANSI; enabled on Windows 10+ below) ----------
 GREEN, YELLOW, RED, CYAN, DIM, RESET = (
     "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[36m", "\x1b[2m", "\x1b[0m")
+if HEADLESS:
+    GREEN = YELLOW = RED = CYAN = DIM = RESET = ""
 
 if os.name == "nt" and HAS_CONSOLE:
     # No-op that enables ANSI escape processing on Windows. Skipped under
@@ -212,7 +217,7 @@ def task_status_of(t):
 def draw():
     """Redraw the whole console dashboard. No-op without a console
     (pythonw tray mode) -- the tray tooltip carries the status there."""
-    if not HAS_CONSOLE or _CONSOLE_HIDDEN:
+    if not HAS_CONSOLE or _CONSOLE_HIDDEN or HEADLESS:
         return
     with DRAW_LOCK:
         with TASKS_LOCK:
@@ -266,6 +271,8 @@ def draw():
 
 def note(text):
     RECENT.append((time.strftime("%H:%M:%S"), text))
+    if HEADLESS:
+        say(text)  # the journal is the dashboard
     draw()
 
 
@@ -1036,7 +1043,10 @@ if __name__ == "__main__":
         say("muse_bridge.py v%s" % VERSION)
         sys.exit(0)
     if FIRST_RUN:
-        if HAS_CONSOLE:
+        if HEADLESS:
+            # Never write the secrets to a journal; they're in the config file.
+            say("first run: new LAN key and queue path stored in %s" % CONFIG_PATH)
+        elif HAS_CONSOLE:
             print("=" * 70)
             print("FIRST RUN -- save these, they are shown only once here.")
             print("  LAN bearer key (local tools): %s" % CONFIG["lan_key"])
@@ -1061,6 +1071,8 @@ if __name__ == "__main__":
         tray_init()
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     srv.daemon_threads = True
+    if HEADLESS:
+        say("muse_bridge v%s headless on 127.0.0.1:%d" % (VERSION, PORT))
     draw()
     try:
         srv.serve_forever()
