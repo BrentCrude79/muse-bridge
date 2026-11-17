@@ -264,6 +264,10 @@ LAN bearer key, model = `muse-bridge`.
 Legend: ✅ verified end-to-end · 🛠️ built, awaiting first use · 🔶 standard
 OpenAI-compatible config, not yet tried — report back.
 
+**Claude Code users:** to have Claude Code set Muse up as a worker, test it and recommend what to use it for, tell it:
+*"Read https://github.com/BrentCrude79/muse-bridge/blob/main/CLAUDE-CODE-SETUP.md and follow it."*
+See [`CLAUDE-CODE-SETUP.md`](CLAUDE-CODE-SETUP.md).
+
 Full per-host MCP setup (all five hosts) in [`mcp/INSTALL.md`](mcp/INSTALL.md);
 copy-paste configs live in `mcp/configs/`.
 
